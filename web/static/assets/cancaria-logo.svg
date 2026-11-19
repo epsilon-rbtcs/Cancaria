@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="172" viewBox="0 0 640 172" role="img" aria-labelledby="title desc">
+  <title id="title">Cancaria</title>
+  <desc id="desc">Cancaria logo: an abstract lung and scan motif beside the wordmark.</desc>
+  <defs>
+    <linearGradient id="a" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#68E0D0"/>
+      <stop offset="1" stop-color="#48AFC0"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="172" rx="22" fill="#101B22"/>
+  <g transform="translate(14 10)">
+    <circle cx="76" cy="76" r="68" fill="#101B22" stroke="#29404A" stroke-width="2"/>
+    <circle cx="76" cy="76" r="58" fill="none" stroke="#42616B" stroke-width="1.5" stroke-dasharray="3 7"/>
+    <path d="M76 30v35" fill="none" stroke="#E8F2F1" stroke-width="7" stroke-linecap="round"/>
+    <path d="M76 54c-6 0-12 4-17 10l-10 12" fill="none" stroke="#E8F2F1" stroke-width="5" stroke-linecap="round"/>
+    <path d="M76 54c6 0 12 4 17 10l10 12" fill="none" stroke="#E8F2F1" stroke-width="5" stroke-linecap="round"/>
+    <path d="M58 59c-14 2-23 15-25 31-2 17 4 31 17 34 12 3 20-8 22-22V70c-3-7-7-11-14-11Z" fill="url(#a)" fill-opacity=".95"/>
+    <path d="M94 59c14 2 23 15 25 31 2 17-4 31-17 34-12 3-20-8-22-22V70c3-7 7-11 14-11Z" fill="url(#a)" fill-opacity=".72"/>
+    <path d="M50 83l12 8 9-2M102 83l-12 8-9-2" fill="none" stroke="#102129" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M76 21v8M76 123v8M21 76h8M123 76h8" stroke="#68E0D0" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(176 59)">
+    <text x="0" y="0" fill="#F0F7F6" font-family="Inter, Avenir, Helvetica, Arial, sans-serif" font-size="54" font-weight="750" letter-spacing="3">CANCARIA</text>
+    <path d="M2 24h330" stroke="#58CDBF" stroke-width="3" stroke-linecap="round"/>
+    <text x="2" y="53" fill="#A8C0C5" font-family="Inter, Avenir, Helvetica, Arial, sans-serif" font-size="15" font-weight="600" letter-spacing="4">LUNG CT CLASSIFICATION</text>
+  </g>
+</svg>

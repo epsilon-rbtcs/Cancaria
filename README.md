@@ -1,209 +1,324 @@
-# Cancaria
+<p align="center">
+  <img src="web/static/assets/cancaria-logo.svg" alt="Cancaria logo" width="340">
+</p>
 
-Cancaria is an experimental, four-class lung CT image classifier built for
-research and education. This repository adds a production-style web interface
-around the existing ResNet-18 checkpoint: a landing page, a scan-analysis
-workspace, a structured report, and a genuine PDF export.
+<h1 align="center">Cancaria</h1>
+<p align="center"><strong>Experimental Lung CT Image Classification & Reporting Platform</strong></p>
+<p align="center">
+  Built for <strong>ML Empowerment Build Challenge 4.0</strong> · Research & education prototype
+</p>
 
-It reads a single CT frame and reports the model's four softmax scores. It does
-not detect, stage, or rule out disease, and it is not a medical device.
+<p align="center">
+  <a href="https://github.com/epsilon-rbtcs/Cancaria/releases/tag/v1.0.0">Model release</a> ·
+  <a href="https://github.com/epsilon-rbtcs/Cancaria">Source code</a>
+</p>
 
-## What is in this build
+---
 
-- **Landing page** — a visual opener, an explanation of what the model sees, a
-  four-step workflow, and a clearly labelled demonstration-video placeholder.
-- **Analysis workspace** — drag-and-drop or file picker, neutral sample frames,
-  client and server validation, explicit loading/error/success states, and the
-  complete four-class distribution returned by the real model.
-- **Report** — an on-screen document with an ID, timestamp, analysed image,
-  architecture and checkpoint metadata, ranked scores, generated interpretation,
-  limitations, disclaimer, and a real ReportLab PDF.
-- **In-memory analysis store** — uploaded images live only in server memory for
-  30 minutes (configurable). Nothing is written to disk.
-- **Provider-agnostic narrative layer** — the shipped narrative is a
-  deterministic template. The interface is ready for a Gemini or other LLM
-  provider later, but no LLM is integrated and no image is sent anywhere.
+## About
 
-The original `/predict` contract is preserved. Report fields are additive.
+Cancaria is an experimental four-class lung CT image classifier built for the **ML Empowerment Build Challenge 4.0**. It wraps a fine-tuned **ResNet-18** checkpoint in a web application where a user can upload a single CT image or choose a sample, view the model's four class scores, and generate a structured report with a downloadable PDF.
 
-## Requirements
+The classifier predicts one of the labels represented in its training data: **Adenocarcinoma, Large Cell Carcinoma, Normal,** or **Squamous Cell Carcinoma**. It analyses one 2D image frame; it does not process a full CT series.
+
+> **Important:** Cancaria is not a medical device and does not provide a clinical diagnosis, cancer staging, screening decision, or treatment recommendation. Softmax scores are model scores, not calibrated probabilities of disease. Do not use the output to guide healthcare decisions.
+
+## Features
+
+- **Landing page:** product overview, workflow explanation and a clearly marked demonstration-video placeholder.
+- **Scan workspace:** drag-and-drop or file-picker upload, four neutral sample images, validation and clear processing states.
+- **Real inference:** the saved ResNet-18 checkpoint returns all four class scores.
+- **Structured report:** prediction, ranked scores, image, model metadata, generated interpretation and limitations.
+- **PDF export:** downloadable ReportLab report.
+- **Provider-ready narrative layer:** a deterministic template is used now; the `NarrativeProvider` interface is prepared for a future Gemini or alternative provider. No LLM is called and scan images are not sent to an external AI service.
+
+## How the application works
+
+```mermaid
+flowchart TD
+    U[User] --> W[Web interface]
+    W -->|Upload image or choose sample| API[FastAPI /predict]
+    API --> V[Validate file and decode image]
+    V --> T[Resize, centre-crop and normalize]
+    T --> M[ResNet-18 inference]
+    M --> S[Four-class logits and softmax scores]
+    S --> R[Build report context]
+    R --> N[Template narrative provider]
+    N --> D[HTML report and PDF]
+    D --> W
+```
+
+### Application architecture
+
+```mermaid
+flowchart LR
+    subgraph Client[Browser]
+      L[Landing page]
+      A[Analysis workspace]
+      RV[Report viewer]
+      L --> A --> RV
+    end
+    subgraph Server[FastAPI application]
+      Routes[Routes and upload validation]
+      P[Inference module]
+      Store[In-memory TTL analysis store]
+      Report[Report and PDF renderer]
+      Narrative[NarrativeProvider]
+      Routes --> P --> Store
+      Store --> Report
+      Report --> Narrative
+    end
+    A <-->|Same-origin HTTP| Routes
+    RV <-->|Report JSON, image and PDF| Report
+    Model[(ResNet-18 checkpoint)] --> P
+```
+
+## Model and training
+
+### Model design
+
+Cancaria uses an ImageNet-pretrained **ResNet-18** fine-tuned for four classes. The original 1,000-class fully connected layer is replaced with dropout and a four-output classifier. Inference uses a **224 × 224** RGB input.
+
+```mermaid
+flowchart TD
+    I[CT image frame] --> PRE[RGB decode · resize · centre crop 224 × 224 · normalize]
+    PRE --> STEM[ResNet-18 stem]
+    STEM --> R1[Residual layer 1]
+    R1 --> R2[Residual layer 2]
+    R2 --> R3[Residual layer 3]
+    R3 --> R4[Residual layer 4]
+    R4 --> GAP[Global average pooling]
+    GAP --> FC[Dropout 0.35 + Linear 512 → 4]
+    FC --> Z[Four logits]
+    Z --> SM[Softmax]
+    SM --> OUT[Four class scores]
+```
+
+### Training workflow
+
+```mermaid
+flowchart TD
+    DS[Original train / validation / test images] --> AUDIT[Inspect images and remove exact duplicate leakage]
+    AUDIT --> SPLIT[Cleaned manifest and fixed splits]
+    SPLIT --> AUG[Resize / crop / training augmentation / normalization]
+    AUG --> TL[ImageNet-pretrained ResNet-18 fine-tuning]
+    TL --> EVAL[Evaluate validation loss and macro-F1]
+    EVAL --> BEST[Save best validation macro-F1 checkpoint]
+    BEST --> CKPT[models/cancaria_resnet18_final.pth]
+```
+
+The cleaned split contains **846 retained images**: 493 training, 65 validation and 288 test images. The training split contains 194 Adenocarcinoma, 114 Large Cell Carcinoma, 33 Normal and 152 Squamous Cell Carcinoma images. The small dataset—especially the Normal class—limits how confidently results can generalise.
+
+### Training configuration
+
+| Setting | Value |
+|---|---:|
+| Backbone | ResNet-18, ImageNet pretrained |
+| Input | RGB, 224 × 224 |
+| Dropout | 0.35 |
+| Backbone learning rate | `1e-5` |
+| Classifier learning rate | `1e-4` |
+| Optimizer | AdamW |
+| Weight decay | `1e-4` |
+| Loss | Weighted cross-entropy, label smoothing `0.05` |
+| Class weighting | Normalized square-root inverse frequency |
+| Checkpoint selection | Best validation macro-F1 |
+
+### Mathematical formulation
+
+Let the network produce logits \(z_1,\ldots,z_C\), where \(C=4\).
+
+**Softmax class score**
+
+\[
+ p_c = \frac{e^{z_c}}{\sum_{j=1}^{C} e^{z_j}}, \qquad \sum_{c=1}^{C}p_c=1
+\]
+
+The predicted class is \(\hat y=\operatorname{argmax}_c p_c\). These values describe the model's relative output scores; they are not calibrated clinical probabilities.
+
+**Square-root inverse-frequency class weights**
+
+For class \(c\) with \(n_c\) training examples and mean class count \(\bar n\):
+
+\[
+ \tilde w_c=\sqrt{\frac{\bar n}{n_c}},\qquad
+ w_c=\frac{\tilde w_c}{\frac{1}{C}\sum_{j=1}^{C}\tilde w_j}
+\]
+
+This gives greater weight to less represented classes while reducing the aggressiveness of plain inverse-frequency weighting.
+
+**Weighted cross-entropy with label smoothing**
+
+For one-hot target \(y\), smoothing parameter \(\varepsilon=0.05\), and smoothed target \(q_c=(1-\varepsilon)y_c+\varepsilon/C\):
+
+\[
+ \mathcal L=-\sum_{c=1}^{C} w_c q_c\log(p_c)
+\]
+
+**Evaluation metrics**
+
+\[
+ \text{Accuracy}=\frac{\text{correct predictions}}{N}
+\]
+
+\[
+ \text{Balanced Accuracy}=\frac{1}{C}\sum_{c=1}^{C}\text{Recall}_c
+\]
+
+\[
+ F1_c=2\cdot\frac{\text{Precision}_c\,\text{Recall}_c}{\text{Precision}_c+\text{Recall}_c},\qquad
+ \text{Macro-F1}=\frac{1}{C}\sum_{c=1}^{C}F1_c
+\]
+
+### Recorded model results
+
+- Best validation macro-F1 stored in the checkpoint: **0.7841**.
+- Observed test split: **67.01% accuracy**, **67.29% balanced accuracy**, **68.47% macro-F1**.
+
+The test split was inspected during model development and should not be treated as an untouched independent evaluation. These results are from this small project dataset, not external or clinical validation.
+
+## Run Cancaria locally
+
+### Requirements
 
 - Python 3.11+
-- The trained checkpoint at `models/cancaria_resnet18_final.pth`
-- Optional: a CUDA-capable GPU for faster inference (CPU works)
-- `Data/` is only needed if you want to regenerate the static sample frames; it
-  is not read by the running application
+- The model checkpoint at `models/cancaria_resnet18_final.pth`
+- CPU works; a CUDA-capable NVIDIA GPU can accelerate inference
 
-Install the dependencies:
+### 1. Clone and create an environment
 
 ```powershell
-python -m venv .venv
+git clone https://github.com/epsilon-rbtcs/Cancaria.git
+cd Cancaria
+py -3.11 -m venv .venv
 .venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+```
+
+### 2. Install dependencies
+
+```powershell
 pip install -r requirements.txt
 ```
 
-`requirements.txt` pins the versions used during verification. If you need a
-specific CUDA build of PyTorch, install `torch` and `torchvision` from the
-matching PyTorch index first, then install the rest.
+For a specific CUDA build of PyTorch, install the matching `torch` and `torchvision` wheels from the official PyTorch installation selector first, then install the remaining requirements.
 
-## Run it
+### 3. Download the model checkpoint
 
-From the project root:
+Download [`cancaria_resnet18_final.pth`](https://github.com/epsilon-rbtcs/Cancaria/releases/download/v1.0.0/cancaria_resnet18_final.pth) from the `v1.0.0` release and place it here:
+
+```text
+models/cancaria_resnet18_final.pth
+```
+
+Verify the file with SHA-256:
+
+```powershell
+Get-FileHash .\models\cancaria_resnet18_final.pth -Algorithm SHA256
+```
+
+Expected hash:
+
+```text
+a314fd7d309911f7614ddc18c0453a7a7a1b908c46ce1d9cbb3918616a12f199
+```
+
+### 4. Start the server
+
+From the repository root:
 
 ```powershell
 .venv\Scripts\python.exe -m uvicorn api.main:app --host 127.0.0.1 --port 8000
 ```
 
-Open <http://127.0.0.1:8000>. Add `--reload` while editing server code. The
-checkpoint is loaded once at import time, so restart the process after changing
-backend code.
+Open **http://127.0.0.1:8000**. The interactive API documentation is available at **http://127.0.0.1:8000/docs**.
 
-## Routes
+### 5. Use the application
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| `GET` | `/` | Landing page |
-| `GET` | `/analyse` | Analysis workspace |
-| `GET` | `/report?id=CNC-XXXX-XXXX` | Report viewer |
-| `GET` | `/api` | Legacy service check (`{"message": ...}`) |
-| `GET` | `/api/health` | Model, device, classes, limits, video availability |
-| `GET` | `/api/config` | Public client limits and report TTL |
-| `POST` | `/predict` | Multipart image classification |
-| `GET` | `/api/report/{id}` | Structured report JSON |
-| `GET` | `/api/report/{id}/image` | JPEG preview of the analysed frame |
-| `GET` | `/api/report/{id}/pdf` | ReportLab PDF download |
-| `GET` | `/static/...` | CSS, ES modules, fonts, images, optional video |
+1. Open the landing page and select **Try Cancaria** (or visit `/analyse`).
+2. Upload a PNG, JPEG or WebP image, or choose one of the four neutral sample images.
+3. Start analysis and review the predicted class and all four model scores.
+4. Open the generated report and download its PDF.
 
-Reports are addressed by an unguessable ID such as `CNC-BRXK-2V2S`. They expire
-with the in-memory record (30 minutes by default).
+### Use the trained model from Python
 
-## Upload rules
-
-- PNG, JPEG, or WebP
-- 10 MB maximum
-- At least 32 × 32 px and at most 40 megapixels
-- One still frame; DICOM series and PDFs are rejected
-
-Validation happens in the browser for fast feedback and again on the server.
-Generic upload MIME types are accepted only when the filename has an allowed
-image suffix, and the decoded image format is checked independently.
-
-The sample buttons fetch the local WebP files, wrap them in a `File`, and send
-them through exactly the same `/predict` path as an upload. Their labels are
-neutral (`Sample 01` … `Sample 04`); no class name is shown before inference.
-
-## Demonstration video
-
-The landing page placeholder is intentional. To publish a recording, add:
-
-```text
-web/static/media/cancaria-demo.mp4
-web/static/media/cancaria-demo.en.vtt   # optional captions
-```
-
-Reload the landing page. `/api/health` reports `demo_video` and `demo_captions`
-by checking for those files, and the page mounts the video only when
-`demo_video` is true. No server restart is required. If the files are removed,
-the poster placeholder and its "Recording pending" label return.
-
-The player uses native controls plus a large play/pause target that fades out
-during playback. It keeps the poster available as a fallback if the video fails
-to load. Replace `web/static/assets/img/demo-poster.webp` if you want a
-different still.
-
-## Narrative provider
-
-`src/report.py` defines the `NarrativeProvider` protocol:
+Once the checkpoint is in `models/`, the inference helper can be called directly:
 
 ```python
-class NarrativeProvider(Protocol):
-    provider_id: str
-    provider_label: str
-    is_llm: bool
+from src.predict import predict
 
-    def compose(self, context: ReportContext) -> list[dict[str, Any]]: ...
+result = predict("path/to/ct-image.png")
+print(result["prediction"])
+print(result["scores"])
 ```
 
-`ReportContext` contains only report ID, timestamp, prediction, confidence,
-ranked scores, and model metadata. It deliberately excludes the image, filename,
-and any patient or scanner data. `TemplateNarrativeProvider` is the only
-implementation shipped. `CANCARIA_NARRATIVE_PROVIDER` exists as the selection
-point; `get_narrative_provider()` currently falls back to the template for every
-value so an unknown setting cannot break a report.
+The checkpoint stores the architecture, class order, display names, input size and normalization metadata. Keep the class order and preprocessing aligned with the checkpoint when changing the inference code.
 
-A future Gemini provider can implement `compose()` and be returned from
-`get_narrative_provider()`. The report JSON, HTML, and PDF already render
-whatever sections it returns, and the provider's `id`, `label`, and `is_llm`
-flag appear in the report. This build makes no network calls to any language
-model.
+### Work with or retrain the model
 
-## Privacy and retention
+The training and evaluation notebook is `notebooks/cancaria_training-2.ipynb`. Open it in Jupyter from the repository environment and run its cells in order. The source dataset is deliberately not included in Git; place the dataset in the directory structure expected by the notebook before attempting to reproduce training. The notebook documents preprocessing, training, validation, evaluation and confusion-matrix generation.
 
-- Images are decoded in memory, a JPEG preview is generated in memory, and both
-  the record and preview are held in a thread-safe TTL cache.
-- Nothing is written to disk for an analysis.
-- The store holds at most 48 records; the oldest expire first.
-- Default TTL is 30 minutes. Set `CANCARIA_ANALYSIS_TTL_SECONDS` to change it.
-  The client reads the effective value from `/api/config`.
-- Only `/static` is mounted; `Data/`, `models/`, and `reports/` are not exposed.
-- The browser talks to the same origin with relative URLs. There is no external
-  AI provider call in the request path.
+When experimenting, preserve the validation split for model selection and avoid repeatedly tuning against the test split. Save a new checkpoint separately first; replace `cancaria_resnet18_final.pth` only after checking its class order, input preprocessing, validation metrics and inference compatibility.
 
-## Project layout
+### API routes
+
+| Method | Route | Purpose |
+|---|---|---|
+| `GET` | `/` | Landing page |
+| `GET` | `/analyse` | Scan workspace |
+| `GET` | `/report?id={id}` | Report viewer |
+| `GET` | `/api/health` | Model/device/service status |
+| `GET` | `/api/config` | Public client limits and report TTL |
+| `POST` | `/predict` | Image classification and report creation |
+| `GET` | `/api/report/{id}` | Structured report data |
+| `GET` | `/api/report/{id}/image` | Analysed image preview |
+| `GET` | `/api/report/{id}/pdf` | Download PDF |
+
+### Input constraints
+
+- Accepted formats: PNG, JPEG and WebP.
+- Maximum upload size: 10 MB.
+- Minimum dimensions: 32 × 32 pixels; maximum: 40 megapixels.
+- One still 2D image only. DICOM series and PDFs are not supported.
+
+## Project structure
 
 ```text
-api/main.py              FastAPI app, routes, validation, MIME types
-src/predict.py           Existing ResNet-18 inference + MODEL_INFO
-src/analysis_store.py    TTL, in-memory analysis records
-src/report.py            Report payload, narrative protocol, PDF renderer
-web/templates/           Jinja2 pages and shared nav/footer partials
-web/static/css/          Design tokens, landing, workspace, report, print CSS
-web/static/js/           ES modules for nav, video, workspace, report
-web/static/assets/       Fonts, UI/report TTFs, dataset frames, poster
-models/                  Checkpoint (not served, not committed)
-Data/                    Source dataset (not served, not committed)
-reports/                 Pre-existing training reports (not served)
+Cancaria/
+├── api/
+│   └── main.py                 # FastAPI routes and upload validation
+├── src/
+│   ├── predict.py               # ResNet-18 loading and inference
+│   ├── analysis_store.py        # In-memory TTL report/image store
+│   └── report.py                # Report schema, narrative and PDF renderer
+├── web/
+│   ├── templates/               # Landing, analysis and report pages
+│   └── static/
+│       ├── css/                  # Design tokens and page styles
+│       ├── js/                   # Frontend interactions
+│       └── assets/               # Fonts, images and logo
+├── notebooks/                   # Model training and evaluation notebook
+├── models/                      # Downloaded checkpoint (not in Git)
+├── Data/                        # Local dataset (not served or committed)
+├── reports/                     # Local training outputs
+├── requirements.txt
+├── DESIGN.md
+└── README.md
 ```
 
-The report PDF embeds the brand fonts from
-`web/static/assets/reportfonts/`, generated from the same woff2 families used by
-the site.
+## Reports, privacy and limitations
 
-## Verification performed
-
-The interface was exercised against the real checkpoint, not mocked responses:
-
-- Sample 01 → Normal 92.53% (`CNC-BRXK-2V2S`)
-- Sample 02 → Squamous Cell Carcinoma 56.54% (`CNC-QX4T-C75B`)
-- Sample 03 → Adenocarcinoma 36.78% (`CNC-79E5-C5C6`)
-- Sample 04 → Squamous Cell Carcinoma 50.32%
-- PDF download produced a valid 3-page document; print-to-PDF also completed
-- Server validation returned the expected 400/413/415/404 responses for tiny,
-  fake, oversized, wrong-MIME, and missing-report requests
-- Playwright runs reported no console or page errors; the in-page axe-core audit
-  reported no WCAG 2.1 A/AA or best-practice violations on the landing page,
-  workspace states, report, and mobile menu
-- Keyboard navigation, the mobile menu focus trap/Escape handling, copy-report-ID,
-  and the print stylesheet were tested
-
-These checks describe the interface, not clinical validity. The checkpoint was
-trained on the project's own split and has not been externally validated.
-
-## Limitations
-
-- One 224 × 224 centre crop of one frame is the only input. Lesion size,
-  location, and multi-slice context are not modelled.
-- The four classes are fixed by the checkpoint.
-- Softmax scores are not calibrated disease probabilities and have no clinical
-  decision threshold.
-- There is no segmentation, staging, risk prediction, or treatment guidance.
-- DICOM series, scanner metadata, and patient history are not read.
-
-**This output comes from an experimental image classifier. It is not a
-diagnosis, a clinical opinion, or a substitute for review by a qualified
-clinician. Do not use it to guide screening, treatment, or any decision about a
-person's health.**
+- Analysis records and previews are held in a thread-safe in-memory cache for **30 minutes by default**; the cache is cleared when the server process stops. The TTL can be changed with `CANCARIA_ANALYSIS_TTL_SECONDS`.
+- The application does not write uploaded scans to disk. Only `/static` is mounted; `Data/`, `models/` and `reports/` are not served.
+- The current report narrative is template-generated. Gemini is not integrated; `NarrativeProvider` is the extension point for a future provider.
+- The model examines one 224 × 224 image crop. It does not use multi-slice context, scanner metadata or patient history.
+- There is no segmentation, staging, calibrated risk score or treatment guidance.
+- Dataset-derived sample imagery and dataset redistribution terms should be checked against the original dataset licence before redistribution.
 
 ## License
 
-See `LICENSE`.
+This repository is distributed under the MIT License; see [`LICENSE`](LICENSE). The model checkpoint and dataset-derived assets may have separate applicable terms. Verify their provenance and redistribution permissions independently.
+
+---
+
+<p align="center"><strong>Cancaria</strong> · An experimental AI image-classification prototype for research and education.</p>
