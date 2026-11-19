@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ title }}{% endblock %}</title>
+  <meta name="description" content="{% block description %}Cancaria is an experimental, four-class lung CT image classifier built for research and education. It is not a medical device.{% endblock %}">
+  <meta name="theme-color" content="#0A1517">
+  <meta name="color-scheme" content="light">
+  <link rel="icon" href="/static/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/static/assets/fonts/newsreader-300-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/assets/fonts/archivo-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/site.css">
+  {% block styles %}{% endblock %}
+</head>
+<body class="page-{{ page }}" data-page="{{ page }}" id="top">
+  <a class="skip-link" href="#main">Skip to content</a>
+  {% block header %}{% include "_nav.html" %}{% endblock %}
+  {% block content %}{% endblock %}
+  {% block footer %}{% include "_footer.html" %}{% endblock %}
+  <script type="module" src="/static/js/main.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

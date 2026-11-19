@@ -1,0 +1,16 @@
+# Cancaria runtime dependencies
+# Python 3.11+
+#
+# The pinned versions match the environment this interface was verified in.
+# On Windows/Linux, install the PyTorch build appropriate for the machine. The
+# CUDA wheels used here came from https://download.pytorch.org/whl/cu128 and
+# report themselves as 2.11.0+cu128 / 0.26.0+cu128.
+fastapi==0.165.0
+uvicorn==0.54.0
+jinja2==3.1.6
+python-multipart==0.0.34
+pillow==13.0.0
+numpy==2.4.6
+torch==2.11.0
+torchvision==0.26.0
+reportlab==4.4.4

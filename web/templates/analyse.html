@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+
+{% block title %}Scan analysis — Cancaria{% endblock %}
+{% block description %}Upload a lung CT frame or choose a sample and run the experimental Cancaria ResNet-18 classifier. Results show all four class scores and a downloadable report.{% endblock %}
+
+{% block styles %}
+  <link rel="stylesheet" href="/static/css/workspace.css">
+{% endblock %}
+
+{% block content %}
+<main id="main" class="workspace">
+  <div class="container">
+    <header class="workspace-head">
+      <p class="workspace-kicker">Scan analysis</p>
+      <div class="workspace-title-row">
+        <h1>One frame in. <em>Four scores out.</em></h1>
+        <p class="workspace-intro">
+          Choose a lung CT frame from your device or start with a sample.
+          Cancaria returns the model's predicted class, every class score, and a
+          structured report you can download.
+        </p>
+      </div>
+      <div class="workspace-statusbar">
+        <div class="status-chip" data-health>
+          <span class="status-dot" aria-hidden="true"></span>
+          <span data-health-text>Checking inference service</span>
+        </div>
+        <p>
+          One image is sent to this server for classification. It is held in
+          memory for <span data-report-ttl>30</span> minutes so the report can be
+          generated, and is never written to disk.
+        </p>
+      </div>
+    </header>
+
+    <div class="workspace-grid">
+      <aside class="workspace-rail" aria-label="Analysis progress">
+        <ol class="rail-steps" data-steps>
+          <li class="is-active" data-step="image">
+            <span class="rail-num">01</span>
+            <span class="rail-copy">
+              <span class="rail-title">Image</span>
+              <span class="rail-sub">Choose or drop a frame</span>
+            </span>
+          </li>
+          <li data-step="inference">
+            <span class="rail-num">02</span>
+            <span class="rail-copy">
+              <span class="rail-title">Inference</span>
+              <span class="rail-sub">ResNet-18 forward pass</span>
+            </span>
+          </li>
+          <li data-step="report">
+            <span class="rail-num">03</span>
+            <span class="rail-copy">
+              <span class="rail-title">Report</span>
+              <span class="rail-sub">Scores, limits, PDF</span>
+            </span>
+          </li>
+        </ol>
+
+        <div class="rail-note">
+          <p class="rail-note-title">What leaves your device</p>
+          <p>
+            Only the selected image is uploaded. No patient metadata is read or
+            sent, and no scan is passed to an external AI provider.
+          </p>
+        </div>
+
+        <div class="rail-links">
+          <a href="/#workflow">How the model works</a>
+          <a href="/#about">About Cancaria</a>
+        </div>
+      </aside>
+
+      <section class="workspace-panel" aria-labelledby="workspace-panel-title">
+        <h2 class="visually-hidden" id="workspace-panel-title">Scan upload and results</h2>
+
+        <div class="stage" data-stage="input">
+          <div class="stage-head">
+            <p class="stage-kicker">Step 01 / Input</p>
+            <p class="stage-note" data-input-note>PNG, JPEG, or WebP · up to 10 MB</p>
+          </div>
+
+          <div class="upload-block">
+            <label class="visually-hidden" for="scan-file">Upload a CT frame</label>
+            <input
+              class="file-input"
+              type="file"
+              id="scan-file"
+              name="file"
+              accept="image/png,image/jpeg,image/webp"
+              data-file-input>
+            <button class="dropzone" type="button" data-choose-file aria-describedby="upload-help">
+              <span class="dropzone-icon" aria-hidden="true">
+                <svg viewBox="0 0 32 32" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.3">
+                  <path d="M16 22V6m0 0-6 6m6-6 6 6" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M5 20v5.5A1.5 1.5 0 0 0 6.5 27h19a1.5 1.5 0 0 0 1.5-1.5V20" stroke-linecap="round"/>
+                </svg>
+              </span>
+              <span class="dropzone-title">Drop a CT frame here</span>
+              <span class="dropzone-or">or choose a file</span>
+              <span class="dropzone-help" id="upload-help">
+                One image, up to <span data-max-size>10</span> MB. The model accepts
+                PNG, JPEG, and WebP; DICOM series are not supported.
+              </span>
+              <span class="dropzone-corners" aria-hidden="true"></span>
+            </button>
+            <p class="dropzone-support">
+              A single axial still frame works best. The classifier was trained
+              on 224 × 224 crops, so the image is resized and centre-cropped
+              before inference.
+            </p>
+          </div>
+
+          <div class="samples" id="samples">
+            <div class="samples-head">
+              <h3>Start with a sample</h3>
+              <p>Labels are withheld until the model runs.</p>
+            </div>
+            <div class="sample-grid" role="group" aria-label="Sample scans" data-samples>
+              <button class="sample" type="button" data-sample="01" aria-pressed="false">
+                <span class="sample-frame">
+                  <img src="/static/assets/img/sample-01.webp" alt="Curated CT sample 01" width="940" height="627" loading="lazy">
+                </span>
+                <span class="sample-foot">
+                  <span class="sample-name">Sample 01</span>
+                  <span class="sample-action" data-sample-action>Select</span>
+                </span>
+              </button>
+              <button class="sample" type="button" data-sample="02" aria-pressed="false">
+                <span class="sample-frame">
+                  <img src="/static/assets/img/sample-02.webp" alt="Curated CT sample 02" width="423" height="308" loading="lazy">
+                </span>
+                <span class="sample-foot">
+                  <span class="sample-name">Sample 02</span>
+                  <span class="sample-action" data-sample-action>Select</span>
+                </span>
+              </button>
+              <button class="sample" type="button" data-sample="03" aria-pressed="false">
+                <span class="sample-frame">
+                  <img src="/static/assets/img/sample-03.webp" alt="Curated CT sample 03" width="390" height="297" loading="lazy">
+                </span>
+                <span class="sample-foot">
+                  <span class="sample-name">Sample 03</span>
+                  <span class="sample-action" data-sample-action>Select</span>
+                </span>
+              </button>
+              <button class="sample" type="button" data-sample="04" aria-pressed="false">
+                <span class="sample-frame">
+                  <img src="/static/assets/img/sample-04.webp" alt="Curated CT sample 04" width="394" height="275" loading="lazy">
+                </span>
+                <span class="sample-foot">
+                  <span class="sample-name">Sample 04</span>
+                  <span class="sample-action" data-sample-action>Select</span>
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <div class="inline-note">
+            <span class="inline-note-mark" aria-hidden="true"></span>
+            <p>
+              Cancaria is an experimental classifier. It does not diagnose,
+              stage, or rule out disease, and it should never be used for a
+              health decision.
+            </p>
+          </div>
+
+          <div class="notice notice-error" data-error role="alert" tabindex="-1" hidden>
+            <p class="notice-title" data-error-title>Something went wrong</p>
+            <p class="notice-body" data-error-body></p>
+            <div class="notice-actions">
+              <button class="btn btn-outline btn-small" type="button" data-error-retry hidden>Retry</button>
+              <button class="btn btn-outline btn-small" type="button" data-error-dismiss>Dismiss</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="stage" data-stage="ready" hidden>
+          <div class="stage-head">
+            <p class="stage-kicker">Step 01 / Review</p>
+            <button class="stage-link" type="button" data-replace>Replace image</button>
+          </div>
+
+          <div class="selected">
+            <figure class="selected-frame" data-selected-frame>
+              <img data-preview alt="Preview of the selected CT frame">
+              <span class="selected-scan" aria-hidden="true"></span>
+              <span class="selected-state" data-selected-state>Ready</span>
+            </figure>
+
+            <div class="selected-info">
+              <p class="selected-source" data-source>File upload</p>
+              <h2 class="selected-name" data-filename tabindex="-1">Selected image</h2>
+              <dl class="selected-meta">
+                <div><dt>Dimensions</dt><dd data-dimensions>—</dd></div>
+                <div><dt>File size</dt><dd data-filesize>—</dd></div>
+                <div><dt>Format</dt><dd data-filetype>—</dd></div>
+              </dl>
+              <div class="selected-actions">
+                <button class="btn btn-primary" type="button" data-analyse>Analyse scan</button>
+                <button class="btn btn-outline" type="button" data-clear>Remove</button>
+              </div>
+              <p class="selected-note">
+                Inference runs on the server. CPU inference can take a few
+                seconds; keep this page open until the result appears.
+              </p>
+            </div>
+          </div>
+
+          <div class="analysis-progress" data-progress hidden>
+            <div class="progress-line" aria-hidden="true"><span></span></div>
+            <div class="progress-copy">
+              <p class="progress-title">Running the classifier</p>
+              <p class="progress-note" aria-live="polite" data-progress-text>
+                Sending the frame to ResNet-18 and reading the four class scores.
+              </p>
+            </div>
+          </div>
+
+          <div class="notice notice-error" data-error-ready role="alert" tabindex="-1" hidden>
+            <p class="notice-title" data-error-title>Something went wrong</p>
+            <p class="notice-body" data-error-body></p>
+            <div class="notice-actions">
+              <button class="btn btn-outline btn-small" type="button" data-error-retry>Retry analysis</button>
+              <button class="btn btn-outline btn-small" type="button" data-error-dismiss>Dismiss</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="stage" data-stage="result" hidden>
+          <div class="result-head">
+            <p class="stage-kicker">Model classification result</p>
+            <p class="result-id"><span class="mono">Report</span> <span class="mono" data-result-report>—</span></p>
+          </div>
+
+          <div class="result-summary">
+            <div class="result-verdict">
+              <p class="result-label">Predicted class</p>
+              <h2 class="result-class" data-result-class tabindex="-1">—</h2>
+              <p class="result-confidence">
+                <span data-result-conf>—</span>
+                <span class="result-unit">softmax score</span>
+              </p>
+              <p class="result-meaning">
+                The leading share of a four-way distribution. It is not a
+                calibrated probability or a disease diagnosis.
+              </p>
+            </div>
+            <figure class="result-frame">
+              <img data-result-image alt="The CT frame that was classified">
+              <figcaption data-result-caption>Analysed frame</figcaption>
+            </figure>
+          </div>
+
+          <div class="scores-block">
+            <div class="scores-head">
+              <h3>Class-wise scores</h3>
+              <p>Softmax across four labels. Scores sum to 100%.</p>
+            </div>
+            <ol class="score-list" data-scores></ol>
+          </div>
+
+          <div class="result-meta" aria-label="Run details">
+            <div class="result-meta-item">
+              <span class="mono">Model</span>
+              <span>ResNet-18 · 224 × 224</span>
+            </div>
+            <div class="result-meta-item">
+              <span class="mono">Inference</span>
+              <span data-result-time>—</span>
+            </div>
+            <div class="result-meta-item">
+              <span class="mono">Report retention</span>
+              <span><span data-report-ttl>30</span> minutes, memory only</span>
+            </div>
+          </div>
+
+          <div class="result-actions">
+            <a class="btn btn-primary" data-report-link href="/report">Open detailed report</a>
+            <a class="btn btn-outline" data-pdf-link href="#" download>Download PDF</a>
+            <button class="btn btn-outline" type="button" data-reset>Analyse another scan</button>
+          </div>
+
+          <div class="inline-note inline-note-strong">
+            <span class="inline-note-mark" aria-hidden="true"></span>
+            <p>
+              Experimental output. Not a diagnosis, a clinical opinion, or a
+              substitute for review by a qualified clinician. Softmax scores
+              are not calibrated disease probabilities.
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+  <script type="module" src="/static/js/analyse.js"></script>
+{% endblock %}
