@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="web/static/assets/cancaria-logo.png" alt="Cancaria logo" width="340">
+  <img src="web\static\assets\cancaria-logo.png" alt="Cancaria — Lung CT Image Classification & Reporting Platform" width="100%">
 </p>
 
 <h1 align="center">Cancaria</h1>
