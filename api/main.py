@@ -46,15 +46,11 @@ for _type, _ext in (
     ("image/webp", ".webp"),
     ("image/svg+xml", ".svg"),
     ("font/woff2", ".woff2"),
-    ("video/mp4", ".mp4"),
-    ("text/vtt", ".vtt"),
 ):
     mimetypes.add_type(_type, _ext)
 
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
-DEMO_VIDEO = WEB / "static" / "media" / "cancaria-demo.mp4"
-DEMO_CAPTIONS = WEB / "static" / "media" / "cancaria-demo.en.vtt"
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 ALLOWED_TYPES = {"image/png", "image/jpeg", "image/webp"}
@@ -140,8 +136,6 @@ def health():
         "input_size": MODEL_INFO["image_size"],
         "narrative_provider": provider.provider_id,
         "max_upload_mb": MAX_UPLOAD_BYTES // (1024 * 1024),
-        "demo_video": DEMO_VIDEO.is_file(),
-        "demo_captions": DEMO_CAPTIONS.is_file(),
     }
 
 
