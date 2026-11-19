@@ -126,49 +126,49 @@ The cleaned split contains **846 retained images**: 493 training, 65 validation 
 
 ### Mathematical formulation
 
-Let the network produce logits \(z_1,\ldots,z_C\), where \(C=4\).
+Let the network produce logits $z_1,\ldots,z_C$, where $C=4$.
 
 **Softmax class score**
 
-\[
+$$
  p_c = \frac{e^{z_c}}{\sum_{j=1}^{C} e^{z_j}}, \qquad \sum_{c=1}^{C}p_c=1
-\]
+$$
 
-The predicted class is \(\hat y=\operatorname{argmax}_c p_c\). These values describe the model's relative output scores; they are not calibrated clinical probabilities.
+The predicted class is $\hat y=\operatorname{argmax}_c p_c$. These values describe the model's relative output scores; they are not calibrated clinical probabilities.
 
 **Square-root inverse-frequency class weights**
 
-For class \(c\) with \(n_c\) training examples and mean class count \(\bar n\):
+For class $c$ with $n_c$ training examples and mean class count $\bar n$:
 
-\[
+$$
  \tilde w_c=\sqrt{\frac{\bar n}{n_c}},\qquad
  w_c=\frac{\tilde w_c}{\frac{1}{C}\sum_{j=1}^{C}\tilde w_j}
-\]
+$$
 
 This gives greater weight to less represented classes while reducing the aggressiveness of plain inverse-frequency weighting.
 
 **Weighted cross-entropy with label smoothing**
 
-For one-hot target \(y\), smoothing parameter \(\varepsilon=0.05\), and smoothed target \(q_c=(1-\varepsilon)y_c+\varepsilon/C\):
+For one-hot target $y$, smoothing parameter $\varepsilon=0.05$, and smoothed target $q_c=(1-\varepsilon)y_c+\varepsilon/C$:
 
-\[
+$$
  \mathcal L=-\sum_{c=1}^{C} w_c q_c\log(p_c)
-\]
+$$
 
 **Evaluation metrics**
 
-\[
+$$
  \text{Accuracy}=\frac{\text{correct predictions}}{N}
-\]
+$$
 
-\[
+$$
  \text{Balanced Accuracy}=\frac{1}{C}\sum_{c=1}^{C}\text{Recall}_c
-\]
+$$
 
-\[
+$$
  F1_c=2\cdot\frac{\text{Precision}_c\,\text{Recall}_c}{\text{Precision}_c+\text{Recall}_c},\qquad
  \text{Macro-F1}=\frac{1}{C}\sum_{c=1}^{C}F1_c
-\]
+$$
 
 ### Recorded model results
 
