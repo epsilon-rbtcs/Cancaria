@@ -134,7 +134,13 @@ $$
  p_c = \frac{e^{z_c}}{\sum_{j=1}^{C} e^{z_j}}, \qquad \sum_{c=1}^{C}p_c=1
 $$
 
-The predicted class is $\hat y=\operatorname{argmax}_c p_c$. These values describe the model's relative output scores; they are not calibrated clinical probabilities.
+The predicted class is:
+
+$$
+\hat{y}=\underset{c\in\{1,\ldots,C\}}{\mathrm{arg\,max}}\,p_c
+$$
+
+These values describe the model's relative output scores; they are not calibrated clinical probabilities.
 
 **Square-root inverse-frequency class weights**
 
